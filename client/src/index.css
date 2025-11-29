@@ -1,0 +1,230 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Material Design 3 Color Tokens - Enhanced Spring Theme */
+  --md-sys-color-primary: 142 76% 73%;      /* Refined Spring green */
+  --md-sys-color-on-primary: 180 35% 20%;   /* Darker text on primary */
+  --md-sys-color-primary-container: 180 25% 28%;
+  --md-sys-color-on-primary-container: 0 0% 98%;
+  
+  --md-sys-color-secondary: 196 70% 75%;    /* Brighter Spring blue */
+  --md-sys-color-on-secondary: 180 35% 20%;
+  --md-sys-color-secondary-container: 180 32% 15%;
+  --md-sys-color-on-secondary-container: 0 0% 98%;
+  
+  --md-sys-color-tertiary: 340 65% 65%;     /* Vibrant Spring accent */
+  --md-sys-color-on-tertiary: 180 35% 20%;
+  --md-sys-color-tertiary-container: 180 22% 32%;
+  --md-sys-color-on-tertiary-container: 0 0% 98%;
+  
+  --md-sys-color-surface: 180 28% 22%;      /* Refined background */
+  --md-sys-color-on-surface: 0 0% 98%;
+  --md-sys-color-surface-variant: 180 25% 28%;
+  --md-sys-color-on-surface-variant: 0 0% 98%;
+  
+  --md-sys-color-outline: 180 22% 38%;
+  --md-sys-color-outline-variant: 180 22% 42%;
+  
+  /* Enhanced Elevation with more pronounced shadows */
+  --md-sys-elevation-level1: 0px 2px 4px rgba(0, 0, 0, 0.2), 0px 1px 3px rgba(0, 0, 0, 0.12), 0px 1px 2px rgba(0, 0, 0, 0.14);
+  --md-sys-elevation-level2: 0px 4px 8px rgba(0, 0, 0, 0.18), 0px 2px 4px rgba(0, 0, 0, 0.12), 0px 1px 3px rgba(0, 0, 0, 0.14);
+  --md-sys-elevation-level3: 0px 8px 16px rgba(0, 0, 0, 0.16), 0px 4px 8px rgba(0, 0, 0, 0.12), 0px 2px 4px rgba(0, 0, 0, 0.14);
+  
+  /* Refined Shape Tokens */
+  --md-sys-shape-corner-extra-small: 6px;
+  --md-sys-shape-corner-small: 10px;
+  --md-sys-shape-corner-medium: 14px;
+  --md-sys-shape-corner-large: 18px;
+  --md-sys-shape-corner-extra-large: 28px;
+  
+  /* ShadCN UI variables mapped to MD3 */
+  --background: var(--md-sys-color-surface);
+  --foreground: var(--md-sys-color-on-surface);
+  --card: var(--md-sys-color-surface-variant);
+  --card-foreground: var(--md-sys-color-on-surface-variant);
+  --popover: var(--md-sys-color-surface-variant);
+  --popover-foreground: var(--md-sys-color-on-surface-variant);
+  --primary: var(--md-sys-color-primary);
+  --primary-foreground: var(--md-sys-color-on-primary);
+  --secondary: var(--md-sys-color-secondary);
+  --secondary-foreground: var(--md-sys-color-on-secondary);
+  --muted: var(--md-sys-color-surface-variant);
+  --muted-foreground: var(--md-sys-color-on-surface-variant);
+  --accent: var(--md-sys-color-tertiary);
+  --accent-foreground: var(--md-sys-color-on-tertiary);
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: var(--md-sys-color-outline);
+  --input: var(--md-sys-color-surface-variant);
+  --ring: var(--md-sys-color-primary);
+  --radius: var(--md-sys-shape-corner-medium);
+}
+
+@layer base {
+  * {
+    @apply border-border antialiased;
+  }
+  
+  body {
+    @apply bg-background text-foreground min-h-screen;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-card text-card-foreground rounded-[var(--md-sys-shape-corner-medium)] shadow-elevation-1 transition-all duration-300 hover:shadow-elevation-2;
+  }
+  
+  .card-header {
+    @apply p-6 bg-[hsl(var(--md-sys-color-secondary-container))] rounded-t-[var(--md-sys-shape-corner-medium)] border-b border-[hsl(var(--md-sys-color-outline))] transition-colors;
+  }
+  
+  .card-body {
+    @apply p-6 bg-[hsl(var(--md-sys-color-surface-variant))] transition-colors;
+  }
+  
+  .card-footer {
+    @apply p-6 bg-[hsl(var(--md-sys-color-secondary-container))] rounded-b-[var(--md-sys-shape-corner-medium)] border-t border-[hsl(var(--md-sys-color-outline))] transition-colors;
+  }
+  
+  .btn {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-[var(--md-sys-shape-corner-small)] px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--md-sys-color-primary))] focus:ring-offset-2 disabled:opacity-50 shadow-sm hover:shadow active:scale-[0.98];
+  }
+  
+  .btn-primary {
+    @apply bg-[hsl(var(--md-sys-color-primary))] text-[hsl(var(--md-sys-color-on-primary))] hover:opacity-90;
+  }
+  
+  .btn-secondary {
+    @apply bg-[hsl(var(--md-sys-color-secondary))] text-[hsl(var(--md-sys-color-on-secondary))] hover:opacity-90;
+  }
+  
+  .btn-accent {
+    @apply bg-[hsl(var(--md-sys-color-tertiary))] text-[hsl(var(--md-sys-color-on-tertiary))] hover:opacity-90;
+  }
+  
+  .input-field {
+    @apply h-11 w-full bg-[hsl(var(--md-sys-color-surface-variant))] text-[hsl(var(--md-sys-color-on-surface-variant))] rounded-[var(--md-sys-shape-corner-small)] border border-[hsl(var(--md-sys-color-outline))] px-4 py-2 text-base transition-all duration-200 placeholder:text-[hsl(var(--md-sys-color-on-surface-variant)_/_0.6)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--md-sys-color-primary))] focus:border-transparent shadow-sm focus:shadow md:text-sm;
+  }
+  
+  .input-label {
+    @apply block text-sm font-medium text-[hsl(var(--md-sys-color-on-surface-variant))] mb-2;
+  }
+  
+  .summary-box {
+    @apply bg-[hsl(var(--md-sys-color-surface-variant))] rounded-[var(--md-sys-shape-corner-medium)] p-5 shadow-elevation-1 transition-all duration-300 hover:shadow-elevation-2;
+  }
+  
+  .summary-label {
+    @apply text-sm text-[hsl(var(--md-sys-color-secondary))] font-medium mb-1.5;
+  }
+  
+  .summary-value {
+    @apply text-2xl font-bold text-[hsl(var(--md-sys-color-on-surface-variant))] tracking-tight;
+  }
+  
+  .summary-value-blue {
+    @apply text-2xl font-bold text-[hsl(var(--md-sys-color-secondary))] tracking-tight;
+  }
+  
+  .summary-value-accent {
+    @apply text-2xl font-bold text-[hsl(var(--md-sys-color-tertiary))] tracking-tight;
+  }
+}
+
+/* Enhanced Animations */
+@keyframes fadeIn {
+  from { 
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeUp {
+  from { 
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.animate-fadeUp {
+  animation: fadeUp 0.5s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card-header,
+  .card-body,
+  .card-footer {
+    @apply p-4;
+  }
+  
+  .summary-value,
+  .summary-value-blue,
+  .summary-value-accent {
+    @apply text-xl;
+  }
+  
+  .btn {
+    @apply h-10 px-3;
+  }
+  
+  .input-field {
+    @apply h-10;
+  }
+}
+
+/* Scrollbar Styling */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* State Layers */
+.state-layer-hover {
+  @apply relative after:absolute after:inset-0 after:rounded-[inherit] after:bg-current after:opacity-0 hover:after:opacity-10 transition-all duration-200;
+}
+
+.state-layer-active {
+  @apply relative after:absolute after:inset-0 after:rounded-[inherit] after:bg-current after:opacity-0 active:after:opacity-20 transition-all duration-200;
+}

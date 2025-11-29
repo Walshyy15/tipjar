@@ -1,0 +1,5 @@
+# Redirect API requests to Netlify functions
+/api/*  /.netlify/functions/api/:splat  200
+
+# Support client-side routing by sending all other requests to index.html
+/*  /index.html  200 
