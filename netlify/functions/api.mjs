@@ -69,8 +69,22 @@ var storage = new MemStorage();
 
 // server/api/gemini.netlify.js
 import fetch, { FormData } from "node-fetch";
+<<<<<<< ours
+<<<<<<< ours
 var NANONETS_MODEL = "Nanonets-ocr2-7B";
 var NANONETS_ENDPOINT = `https://app.nanonets.com/api/v2/OCR/Model/${NANONETS_MODEL}/LabelFile/`;
+=======
+=======
+>>>>>>> theirs
+var DEFAULT_NANONETS_MODEL = "Nanonets-ocr2-7B";
+var getNanonetsEndpoint = (modelId) => {
+  const resolvedModelId = modelId || process.env.NANONETS_MODEL_ID || DEFAULT_NANONETS_MODEL;
+  return `https://app.nanonets.com/api/v2/OCR/Model/${resolvedModelId}/LabelFile/`;
+};
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 var RATE_LIMIT = {
   maxRetries: 3,
   baseDelay: 1e3,
@@ -140,7 +154,15 @@ function extractTextFromNanonets(responseData) {
   const combined = texts.map((text2) => text2.trim()).filter(Boolean).join("\n").trim();
   return combined || null;
 }
+<<<<<<< ours
+<<<<<<< ours
 async function analyzeImage(imageBase64, mimeType = "image/jpeg", apiKey) {
+=======
+async function analyzeImage(imageBase64, mimeType = "image/jpeg", apiKey, modelId) {
+>>>>>>> theirs
+=======
+async function analyzeImage(imageBase64, mimeType = "image/jpeg", apiKey, modelId) {
+>>>>>>> theirs
   if (!rateLimiter.canMakeRequest()) {
     const waitTime = rateLimiter.getTimeUntilNextRequest();
     return {
@@ -152,6 +174,14 @@ async function analyzeImage(imageBase64, mimeType = "image/jpeg", apiKey) {
   if (!nanonetsKey) {
     return { text: null, error: "API key missing. Please configure the Nanonets API key in environment variables." };
   }
+<<<<<<< ours
+<<<<<<< ours
+=======
+  const endpoint = getNanonetsEndpoint(modelId);
+>>>>>>> theirs
+=======
+  const endpoint = getNanonetsEndpoint(modelId);
+>>>>>>> theirs
   for (let attempt = 0; attempt <= RATE_LIMIT.maxRetries; attempt++) {
     try {
       const formData = new FormData();
@@ -159,7 +189,15 @@ async function analyzeImage(imageBase64, mimeType = "image/jpeg", apiKey) {
         filename: `upload.${mimeType.split("/")[1] || "jpg"}`,
         contentType: mimeType
       });
+<<<<<<< ours
+<<<<<<< ours
       const response = await fetch(NANONETS_ENDPOINT, {
+=======
+      const response = await fetch(endpoint, {
+>>>>>>> theirs
+=======
+      const response = await fetch(endpoint, {
+>>>>>>> theirs
         method: "POST",
         headers: {
           Authorization: `Basic ${Buffer.from(`${nanonetsKey}:`).toString("base64")}`
@@ -180,9 +218,22 @@ async function analyzeImage(imageBase64, mimeType = "image/jpeg", apiKey) {
         }
         console.error("Nanonets API error:", response.status, errorText);
         const sanitizedError = errorText.slice(0, 500) || "Failed to call Nanonets OCR API";
+<<<<<<< ours
+<<<<<<< ours
         return {
           text: null,
           error: `API Error (${response.status}): ${sanitizedError}`
+=======
+=======
+>>>>>>> theirs
+        const modelHint = response.status === 400 && /model id/i.test(errorText) ? " Verify the Nanonets model ID by setting NANONETS_MODEL_ID or the x-nanonets-model header." : "";
+        return {
+          text: null,
+          error: `API Error (${response.status}): ${sanitizedError}.${modelHint}`
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
         };
       }
       const data = await response.json();
@@ -411,8 +462,20 @@ app.post("/api/ocr", upload.single("image"), async (req, res) => {
     }
     const imageBase64 = req.file.buffer.toString("base64");
     const userNanonetsKey = req.headers["x-nanonets-key"] || void 0;
+<<<<<<< ours
+<<<<<<< ours
     const mimeType = req.file.mimetype || "image/jpeg";
     const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
+=======
+    const userNanonetsModel = req.headers["x-nanonets-model"] || void 0;
+    const mimeType = req.file.mimetype || "image/jpeg";
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
+>>>>>>> theirs
+=======
+    const userNanonetsModel = req.headers["x-nanonets-model"] || void 0;
+    const mimeType = req.file.mimetype || "image/jpeg";
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
+>>>>>>> theirs
     if (!result.text) {
       return res.status(500).json({
         error: result.error || "Failed to extract text from image",

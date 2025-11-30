@@ -27,7 +27,17 @@ app.post("/api/ocr", upload.single("image"), async (req, res) => {
     const imageBase64 = req.file.buffer.toString("base64");
     const mimeType = req.file.mimetype || "image/jpeg";
     const userNanonetsKey = (req.headers["x-nanonets-key"] as string) || undefined;
+<<<<<<< ours
+<<<<<<< ours
     const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
+=======
+    const userNanonetsModel = (req.headers["x-nanonets-model"] as string) || undefined;
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
+>>>>>>> theirs
+=======
+    const userNanonetsModel = (req.headers["x-nanonets-model"] as string) || undefined;
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
+>>>>>>> theirs
     if (!result.text) {
       return res.status(500).json({
         error: result.error || "Failed to extract text from image",

@@ -43,7 +43,7 @@ if %ERRORLEVEL% neq 0 (
 
 :: Set environment variables for development
 set NODE_ENV=development
-set NANONETS_API_KEY=your-nanonets-api-key
+set GEMINI_API_KEY=AIzaSyBUo0YJwQJSn7CNpMRw3gYnHXXeMRndI5s
 
 :: Start the server
 echo Starting TipJar application...

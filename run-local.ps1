@@ -47,6 +47,16 @@ if ($LASTEXITCODE -ne 0) {
 # Set environment variables for development
 $env:NODE_ENV = "development"
 $env:NANONETS_API_KEY = "your-nanonets-api-key"
+<<<<<<< ours
+<<<<<<< ours
+=======
+# Optional: set the model ID explicitly to avoid validation errors
+# $env:NANONETS_MODEL_ID = "your-nanonets-model-id"
+>>>>>>> theirs
+=======
+# Optional: set the model ID explicitly to avoid validation errors
+# $env:NANONETS_MODEL_ID = "your-nanonets-model-id"
+>>>>>>> theirs
 
 # Start the server
 Write-Host "Starting TipJar application..." -ForegroundColor Green

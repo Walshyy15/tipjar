@@ -1,8 +1,23 @@
 import fetch, { FormData } from 'node-fetch';
 import { OCR_RATE_LIMIT_CONFIG, isRateLimitError } from '../config/rate-limit';
 
+<<<<<<< ours
+<<<<<<< ours
 const NANONETS_MODEL = 'Nanonets-ocr2-7B';
 const NANONETS_ENDPOINT = `https://app.nanonets.com/api/v2/OCR/Model/${NANONETS_MODEL}/LabelFile/`;
+=======
+=======
+>>>>>>> theirs
+const DEFAULT_NANONETS_MODEL = 'Nanonets-ocr2-7B';
+
+const getNanonetsEndpoint = (modelId?: string) => {
+  const resolvedModelId = modelId || process.env.NANONETS_MODEL_ID || DEFAULT_NANONETS_MODEL;
+  return `https://app.nanonets.com/api/v2/OCR/Model/${resolvedModelId}/LabelFile/`;
+};
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 
 // Simple in-memory rate limiter
 class RateLimiter {
@@ -51,6 +66,8 @@ function extractTextFromNanonets(responseData: any): string | null {
       texts.push(node);
       return;
     }
+<<<<<<< ours
+<<<<<<< ours
 
     if (typeof node.text === 'string') texts.push(node.text);
     if (typeof node.ocr_text === 'string') texts.push(node.ocr_text);
@@ -75,6 +92,58 @@ function extractTextFromNanonets(responseData: any): string | null {
 
   collectFromNode(responseData);
 
+=======
+
+    if (typeof node.text === 'string') texts.push(node.text);
+    if (typeof node.ocr_text === 'string') texts.push(node.ocr_text);
+    if (typeof node.fullText === 'string') texts.push(node.fullText);
+
+    const arrays = [
+      node.result,
+      node.results,
+      node.predictions,
+      node.fields,
+      node.pages,
+      node.page_data,
+      node.lines,
+    ];
+
+    arrays.forEach(collection => {
+      if (Array.isArray(collection)) {
+        collection.forEach(collectFromNode);
+      }
+    });
+  };
+
+  collectFromNode(responseData);
+
+>>>>>>> theirs
+=======
+
+    if (typeof node.text === 'string') texts.push(node.text);
+    if (typeof node.ocr_text === 'string') texts.push(node.ocr_text);
+    if (typeof node.fullText === 'string') texts.push(node.fullText);
+
+    const arrays = [
+      node.result,
+      node.results,
+      node.predictions,
+      node.fields,
+      node.pages,
+      node.page_data,
+      node.lines,
+    ];
+
+    arrays.forEach(collection => {
+      if (Array.isArray(collection)) {
+        collection.forEach(collectFromNode);
+      }
+    });
+  };
+
+  collectFromNode(responseData);
+
+>>>>>>> theirs
   const combined = texts.map(text => text.trim()).filter(Boolean).join('\n').trim();
   return combined || null;
 }
@@ -83,6 +152,14 @@ export async function analyzeImage(
   imageBase64: string,
   mimeType: string = 'image/jpeg',
   apiKey?: string,
+<<<<<<< ours
+<<<<<<< ours
+=======
+  modelId?: string,
+>>>>>>> theirs
+=======
+  modelId?: string,
+>>>>>>> theirs
 ): Promise<{ text: string | null; error?: string }> {
   if (!rateLimiter.canMakeRequest()) {
     const waitTime = rateLimiter.getTimeUntilNextRequest();
@@ -100,13 +177,31 @@ export async function analyzeImage(
     };
   }
 
+<<<<<<< ours
+<<<<<<< ours
+=======
+  const endpoint = getNanonetsEndpoint(modelId);
+
+>>>>>>> theirs
+=======
+  const endpoint = getNanonetsEndpoint(modelId);
+
+>>>>>>> theirs
   for (let attempt = 0; attempt <= OCR_RATE_LIMIT_CONFIG.maxRetries; attempt++) {
     try {
       const formData = new FormData();
       const fileBlob = new Blob([Buffer.from(imageBase64, 'base64')], { type: mimeType });
       formData.append('file', fileBlob, `upload.${mimeType.split('/')[1] || 'jpg'}`);
 
+<<<<<<< ours
+<<<<<<< ours
       const response = await fetch(NANONETS_ENDPOINT, {
+=======
+      const response = await fetch(endpoint, {
+>>>>>>> theirs
+=======
+      const response = await fetch(endpoint, {
+>>>>>>> theirs
         method: 'POST',
         headers: {
           Authorization: `Basic ${Buffer.from(`${nanonetsKey}:`).toString('base64')}`,
@@ -130,9 +225,25 @@ export async function analyzeImage(
 
         console.error('Nanonets API error:', response.status, errorText);
         const sanitizedError = errorText.slice(0, 500) || 'Failed to call Nanonets OCR API';
+<<<<<<< ours
+<<<<<<< ours
         return {
           text: null,
           error: `API Error (${response.status}): ${sanitizedError}`,
+=======
+=======
+>>>>>>> theirs
+        const modelHint =
+          response.status === 400 && /model id/i.test(errorText)
+            ? ' Verify the Nanonets model ID by setting NANONETS_MODEL_ID or the x-nanonets-model header.'
+            : '';
+        return {
+          text: null,
+          error: `API Error (${response.status}): ${sanitizedError}.${modelHint}`,
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
         };
       }
 

@@ -18,66 +18,67 @@ const upload = multer({
 
 export async function registerRoutes(app: Express, skipServer = false): Promise<Server | null> {
   // API routes
-  
+
   // OCR Processing endpoint
   app.post("/api/ocr", upload.single("image"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No image file provided" });
       }
-      
+
       // Convert image buffer to base64
       const imageBase64 = req.file.buffer.toString("base64");
-      
+
       // Use Nanonets OCR to analyze the image
       const userNanonetsKey = (req.headers["x-nanonets-key"] as string) || undefined;
+      const userNanonetsModel = (req.headers["x-nanonets-model"] as string) || undefined;
       const mimeType = req.file.mimetype || "image/jpeg";
-      const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
-      
+      const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
+
       if (!result.text) {
         // Return a specific error message from the API if available
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: result.error || "Failed to extract text from image",
           suggestManualEntry: true
         });
       }
-      
+
       // Parse extracted text to get partner hours
       const partnerHours = extractPartnerHours(result.text);
-      
+
       // Format the extracted text for display
       const formattedText = formatOCRResult(result.text);
-      
+
       res.json({
         extractedText: formattedText,
         partnerHours
       });
     } catch (error) {
       console.error("OCR processing error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to process the image. Please try manual entry instead.",
-        suggestManualEntry: true 
+        suggestManualEntry: true
       });
     }
   });
-  
+
   // Calculate tip distribution
   app.post("/api/distributions/calculate", async (req, res) => {
     try {
       const { partnerHours, totalAmount, totalHours, hourlyRate } = req.body;
-      
+
       // Validate partner hours
       try {
         partnerHoursSchema.parse(partnerHours);
       } catch (error) {
         return res.status(400).json({ error: "Invalid partner hours data" });
       }
-      
+
       // Calculate payout for each partner
       const partnerPayouts = partnerHours.map((partner: { name: string; hours: number }) => {
         const payout = calculatePayout(partner.hours, hourlyRate);
         const { rounded, billBreakdown } = roundAndCalculateBills(payout);
-        
+
         return {
           name: partner.name,
           hours: partner.hours,
@@ -86,40 +87,40 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
           billBreakdown
         };
       });
-      
+
       const distributionData = {
         totalAmount,
         totalHours,
         hourlyRate,
         partnerPayouts
       };
-      
+
       res.json(distributionData);
     } catch (error) {
       console.error("Distribution calculation error:", error);
       res.status(500).json({ error: "Failed to calculate distribution" });
     }
   });
-  
+
   // Save distribution to history
   app.post("/api/distributions", async (req, res) => {
     try {
       const { totalAmount, totalHours, hourlyRate, partnerData } = req.body;
-      
+
       const distribution = await storage.createDistribution({
         totalAmount,
         totalHours,
         hourlyRate,
         partnerData
       });
-      
+
       res.status(201).json(distribution);
     } catch (error) {
       console.error("Save distribution error:", error);
       res.status(500).json({ error: "Failed to save distribution" });
     }
   });
-  
+
   // Get distribution history
   app.get("/api/distributions", async (req, res) => {
     try {
@@ -130,16 +131,16 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
       res.status(500).json({ error: "Failed to retrieve distributions" });
     }
   });
-  
+
   // Partners endpoints
   app.post("/api/partners", async (req, res) => {
     try {
       const { name } = req.body;
-      
+
       if (!name || typeof name !== 'string' || name.trim() === '') {
         return res.status(400).json({ error: "Partner name is required" });
       }
-      
+
       const partner = await storage.createPartner({ name: name.trim() });
       res.status(201).json(partner);
     } catch (error) {
@@ -147,7 +148,7 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
       res.status(500).json({ error: "Failed to create partner" });
     }
   });
-  
+
   app.get("/api/partners", async (req, res) => {
     try {
       const partners = await storage.getPartners();
@@ -157,12 +158,12 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
       res.status(500).json({ error: "Failed to retrieve partners" });
     }
   });
-  
+
   // Skip HTTP server creation for serverless functions
   if (skipServer) {
     return null;
   }
-  
+
   const httpServer = createServer(app);
   return httpServer;
 }

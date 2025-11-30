@@ -33,8 +33,9 @@ app.post("/api/ocr", upload.single("image"), async (req, res) => {
     
     // Use Nanonets OCR to analyze the image
     const userNanonetsKey = req.headers["x-nanonets-key"] || undefined;
+    const userNanonetsModel = req.headers["x-nanonets-model"] || undefined;
     const mimeType = req.file.mimetype || "image/jpeg";
-    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
     
     if (!result.text) {
       // Return a specific error message from the API if available

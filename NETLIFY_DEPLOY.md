@@ -14,6 +14,14 @@ This document provides instructions for deploying the TipJarPro application to N
 Before deploying, you'll need to set up the following environment variables in Netlify:
 
 - `NANONETS_API_KEY`: Your Nanonets OCR API key for OCR functionality
+<<<<<<< ours
+<<<<<<< ours
+=======
+- `NANONETS_MODEL_ID` (optional but recommended): Explicit Nanonets model ID to avoid "Model id not valid" API errors
+>>>>>>> theirs
+=======
+- `NANONETS_MODEL_ID` (optional but recommended): Explicit Nanonets model ID to avoid "Model id not valid" API errors
+>>>>>>> theirs
 - `SESSION_SECRET`: A secure random string for session encryption
 
 To set these up:

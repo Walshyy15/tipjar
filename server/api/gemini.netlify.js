@@ -4,8 +4,22 @@
 
 import fetch, { FormData } from 'node-fetch';
 
+<<<<<<< ours
+<<<<<<< ours
 const NANONETS_MODEL = 'Nanonets-ocr2-7B';
 const NANONETS_ENDPOINT = `https://app.nanonets.com/api/v2/OCR/Model/${NANONETS_MODEL}/LabelFile/`;
+=======
+=======
+>>>>>>> theirs
+const DEFAULT_NANONETS_MODEL = 'Nanonets-ocr2-7B';
+const getNanonetsEndpoint = (modelId) => {
+  const resolvedModelId = modelId || process.env.NANONETS_MODEL_ID || DEFAULT_NANONETS_MODEL;
+  return `https://app.nanonets.com/api/v2/OCR/Model/${resolvedModelId}/LabelFile/`;
+};
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 
 const RATE_LIMIT = {
   maxRetries: 3,
@@ -104,7 +118,15 @@ function extractTextFromNanonets(responseData) {
  * @param {string} [apiKey] - Optional API key override from the request
  * @returns {Promise<{text: string|null, error: string|null}>}
  */
+<<<<<<< ours
+<<<<<<< ours
 export async function analyzeImage(imageBase64, mimeType = 'image/jpeg', apiKey) {
+=======
+export async function analyzeImage(imageBase64, mimeType = 'image/jpeg', apiKey, modelId) {
+>>>>>>> theirs
+=======
+export async function analyzeImage(imageBase64, mimeType = 'image/jpeg', apiKey, modelId) {
+>>>>>>> theirs
   if (!rateLimiter.canMakeRequest()) {
     const waitTime = rateLimiter.getTimeUntilNextRequest();
     return {
@@ -118,6 +140,16 @@ export async function analyzeImage(imageBase64, mimeType = 'image/jpeg', apiKey)
     return { text: null, error: 'API key missing. Please configure the Nanonets API key in environment variables.' };
   }
 
+<<<<<<< ours
+<<<<<<< ours
+=======
+  const endpoint = getNanonetsEndpoint(modelId);
+
+>>>>>>> theirs
+=======
+  const endpoint = getNanonetsEndpoint(modelId);
+
+>>>>>>> theirs
   for (let attempt = 0; attempt <= RATE_LIMIT.maxRetries; attempt++) {
     try {
       const formData = new FormData();
@@ -126,7 +158,14 @@ export async function analyzeImage(imageBase64, mimeType = 'image/jpeg', apiKey)
         contentType: mimeType,
       });
 
+<<<<<<< ours
+<<<<<<< ours
       const response = await fetch(NANONETS_ENDPOINT, {
+=======
+=======
+>>>>>>> theirs
+      const response = await fetch(endpoint, {
+>>>>>>> theirs
         method: 'POST',
         headers: {
           Authorization: `Basic ${Buffer.from(`${nanonetsKey}:`).toString('base64')}`,
@@ -150,9 +189,25 @@ export async function analyzeImage(imageBase64, mimeType = 'image/jpeg', apiKey)
 
         console.error('Nanonets API error:', response.status, errorText);
         const sanitizedError = errorText.slice(0, 500) || 'Failed to call Nanonets OCR API';
+<<<<<<< ours
+<<<<<<< ours
         return {
           text: null,
           error: `API Error (${response.status}): ${sanitizedError}`,
+=======
+=======
+>>>>>>> theirs
+        const modelHint =
+          response.status === 400 && /model id/i.test(errorText)
+            ? ' Verify the Nanonets model ID by setting NANONETS_MODEL_ID or the x-nanonets-model header.'
+            : '';
+        return {
+          text: null,
+          error: `API Error (${response.status}): ${sanitizedError}.${modelHint}`,
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
         };
       }
 
