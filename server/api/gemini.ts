@@ -1,8 +1,7 @@
 import fetch, { FormData } from 'node-fetch';
 import { OCR_RATE_LIMIT_CONFIG, isRateLimitError } from '../config/rate-limit';
 
-const getNanonetsEndpoint = (modelId: string) =>
-  `https://app.nanonets.com/api/v2/OCR/Model/${modelId}/LabelFile/`;
+const NANONETS_EXTRACTION_ENDPOINT = 'https://extraction-api.nanonets.com/extract';
 
 // Simple in-memory rate limiter
 class RateLimiter {
@@ -82,7 +81,6 @@ export async function analyzeImage(
   imageBase64: string,
   mimeType: string = 'image/jpeg',
   apiKey?: string,
-  modelId?: string,
 ): Promise<{ text: string | null; error?: string }> {
   if (!rateLimiter.canMakeRequest()) {
     const waitTime = rateLimiter.getTimeUntilNextRequest();
@@ -100,34 +98,16 @@ export async function analyzeImage(
     };
   }
 
-  const resolvedModelId = (modelId || process.env.NANONETS_MODEL_ID || '').trim();
-  if (!resolvedModelId) {
-    return {
-      text: null,
-      error:
-        'Model ID missing. Configure NANONETS_MODEL_ID or pass x-nanonets-model with your account-specific model ID from the Nanonets dashboard.',
-    };
-  }
-
-  if (/^nanonets-ocr2-7b$/i.test(resolvedModelId)) {
-    return {
-      text: null,
-      error:
-        'The Nanonets model name "Nanonets-ocr2-7B" is not a valid model ID. Copy your model ID from the Nanonets console and set NANONETS_MODEL_ID or x-nanonets-model.',
-    };
-  }
-
-  const endpoint = getNanonetsEndpoint(resolvedModelId);
   for (let attempt = 0; attempt <= OCR_RATE_LIMIT_CONFIG.maxRetries; attempt++) {
     try {
       const formData = new FormData();
       const fileBlob = new Blob([Buffer.from(imageBase64, 'base64')], { type: mimeType });
       formData.append('file', fileBlob, `upload.${mimeType.split('/')[1] || 'jpg'}`);
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(NANONETS_EXTRACTION_ENDPOINT, {
         method: 'POST',
         headers: {
-          Authorization: `Basic ${Buffer.from(`${nanonetsKey}:`).toString('base64')}`,
+          Authorization: `Bearer ${nanonetsKey}`,
         },
         body: formData as any,
       });
@@ -148,13 +128,9 @@ export async function analyzeImage(
 
         console.error('Nanonets API error:', response.status, errorText);
         const sanitizedError = errorText.slice(0, 500) || 'Failed to call Nanonets OCR API';
-        const modelHint =
-          response.status === 400 && /model id/i.test(errorText)
-            ? ' Verify the Nanonets model ID by setting NANONETS_MODEL_ID or the x-nanonets-model header.'
-            : '';
         return {
           text: null,
-          error: `API Error (${response.status}): ${sanitizedError}.${modelHint}`,
+          error: `API Error (${response.status}): ${sanitizedError}`,
         };
       }
 

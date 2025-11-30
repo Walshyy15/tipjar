@@ -31,9 +31,8 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
       
       // Use Nanonets OCR to analyze the image
       const userNanonetsKey = (req.headers["x-nanonets-key"] as string) || undefined;
-      const userNanonetsModel = (req.headers["x-nanonets-model"] as string) || undefined;
       const mimeType = req.file.mimetype || "image/jpeg";
-      const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
+      const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
       
       if (!result.text) {
         // Return a specific error message from the API if available
