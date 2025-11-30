@@ -28,13 +28,21 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
 
       // Convert image buffer to base64
       const imageBase64 = req.file.buffer.toString("base64");
+<<<<<<< ours
 
+=======
+      
+>>>>>>> theirs
       // Use Nanonets OCR to analyze the image
       const userNanonetsKey = (req.headers["x-nanonets-key"] as string) || undefined;
       const userNanonetsModel = (req.headers["x-nanonets-model"] as string) || undefined;
       const mimeType = req.file.mimetype || "image/jpeg";
       const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
+<<<<<<< ours
 
+=======
+      
+>>>>>>> theirs
       if (!result.text) {
         // Return a specific error message from the API if available
         return res.status(500).json({

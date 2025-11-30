@@ -43,7 +43,9 @@ if %ERRORLEVEL% neq 0 (
 
 :: Set environment variables for development
 set NODE_ENV=development
-set GEMINI_API_KEY=AIzaSyBUo0YJwQJSn7CNpMRw3gYnHXXeMRndI5s
+set NANONETS_API_KEY=your-nanonets-api-key
+REM Required: set your account-specific model ID from the Nanonets dashboard
+set NANONETS_MODEL_ID=your-nanonets-model-id
 
 :: Start the server
 echo Starting TipJar application...

@@ -29,7 +29,12 @@ app.post("/api/ocr", upload.single("image"), async (req, res) => {
     const userNanonetsKey = (req.headers["x-nanonets-key"] as string) || undefined;
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
     const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
+=======
+    const userNanonetsModel = (req.headers["x-nanonets-model"] as string) || undefined;
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);
+>>>>>>> theirs
 =======
     const userNanonetsModel = (req.headers["x-nanonets-model"] as string) || undefined;
     const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey, userNanonetsModel);

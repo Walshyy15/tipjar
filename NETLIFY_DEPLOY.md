@@ -16,11 +16,15 @@ Before deploying, you'll need to set up the following environment variables in N
 - `NANONETS_API_KEY`: Your Nanonets OCR API key for OCR functionality
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
 =======
 - `NANONETS_MODEL_ID` (optional but recommended): Explicit Nanonets model ID to avoid "Model id not valid" API errors
 >>>>>>> theirs
 =======
 - `NANONETS_MODEL_ID` (optional but recommended): Explicit Nanonets model ID to avoid "Model id not valid" API errors
+>>>>>>> theirs
+=======
+- `NANONETS_MODEL_ID`: Your Nanonets model ID (copy it from the Nanonets dashboard — the model name alone will return "Model id not valid")
 >>>>>>> theirs
 - `SESSION_SECRET`: A secure random string for session encryption
 
