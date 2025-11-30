@@ -5,7 +5,7 @@ This document provides instructions for deploying the TipJarPro application to N
 ## Prerequisites
 
 - A Netlify account
-- A Gemini API key
+- A Nanonets OCR API key
 
 ## Deployment Steps
 
@@ -13,7 +13,7 @@ This document provides instructions for deploying the TipJarPro application to N
 
 Before deploying, you'll need to set up the following environment variables in Netlify:
 
-- `GEMINI_API_KEY`: Your Google Gemini API key for OCR functionality
+- `NANONETS_API_KEY`: Your Nanonets OCR API key for OCR functionality
 - `SESSION_SECRET`: A secure random string for session encryption
 
 To set these up:

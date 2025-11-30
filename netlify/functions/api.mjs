@@ -59,7 +59,7 @@ var MemStorage = class {
     const distribution = {
       ...insertDistribution,
       id,
-      date: (/* @__PURE__ */ new Date()).toISOString()
+      date: /* @__PURE__ */ new Date()
     };
     this.distributions.set(id, distribution);
     return distribution;
@@ -68,59 +68,149 @@ var MemStorage = class {
 var storage = new MemStorage();
 
 // server/api/gemini.netlify.js
-import fetch from "node-fetch";
-async function analyzeImage(imageBase64) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("No Gemini API key provided");
-      return { text: null, error: "API key missing. Please configure the Gemini API key in environment variables." };
+import fetch, { FormData } from "node-fetch";
+var NANONETS_MODEL = "Nanonets-ocr2-7B";
+var NANONETS_ENDPOINT = `https://app.nanonets.com/api/v2/OCR/Model/${NANONETS_MODEL}/LabelFile/`;
+var RATE_LIMIT = {
+  maxRetries: 3,
+  baseDelay: 1e3,
+  // 1 second
+  maxDelay: 3e4,
+  // 30 seconds
+  backoffMultiplier: 2
+};
+var RateLimiter = class {
+  constructor(maxRequests = 15, windowMs = 6e4) {
+    this.maxRequests = maxRequests;
+    this.windowMs = windowMs;
+    this.requests = [];
+  }
+  canMakeRequest() {
+    const now = Date.now();
+    this.requests = this.requests.filter((time) => now - time < this.windowMs);
+    if (this.requests.length >= this.maxRequests) {
+      return false;
     }
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${apiKey}`;
-    const requestBody = {
-      contents: [
-        {
-          parts: [
-            {
-              text: "Extract and format all text from this image. Focus on any tabular data listing names and hours. Format as plain text."
-            },
-            {
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: imageBase64
-              }
-            }
-          ]
-        }
-      ]
-    };
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(requestBody)
+    this.requests.push(now);
+    return true;
+  }
+  getTimeUntilNextRequest() {
+    if (this.requests.length < this.maxRequests) {
+      return 0;
+    }
+    const oldestRequest = Math.min(...this.requests);
+    return Math.max(0, this.windowMs - (Date.now() - oldestRequest));
+  }
+};
+var rateLimiter = new RateLimiter();
+var sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function isRateLimitError(error) {
+  if (!error) return false;
+  const errorMessage = typeof error === "string" ? error : error.message || "";
+  const errorCode = error.code || error.status;
+  return errorCode === 429 || errorMessage.includes("quota") || errorMessage.includes("rate limit") || errorMessage.includes("requests per minute");
+}
+function extractTextFromNanonets(responseData) {
+  const texts = [];
+  const collectFromNode = (node) => {
+    if (!node) return;
+    if (typeof node === "string") {
+      texts.push(node);
+      return;
+    }
+    if (typeof node.text === "string") texts.push(node.text);
+    if (typeof node.ocr_text === "string") texts.push(node.ocr_text);
+    if (typeof node.fullText === "string") texts.push(node.fullText);
+    const arrays = [
+      node.result,
+      node.results,
+      node.predictions,
+      node.fields,
+      node.pages,
+      node.page_data,
+      node.lines
+    ];
+    arrays.forEach((collection) => {
+      if (Array.isArray(collection)) {
+        collection.forEach(collectFromNode);
+      }
     });
-    const responseData = await response.json();
-    if (!response.ok) {
-      console.error("Gemini API error:", responseData);
-      return {
-        text: null,
-        error: responseData.error?.message || "Error processing image with Gemini API"
-      };
-    }
-    const extractedText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!extractedText) {
-      return { text: null, error: "No text extracted from image" };
-    }
-    return { text: extractedText, error: null };
-  } catch (error) {
-    console.error("Gemini API error:", error);
+  };
+  collectFromNode(responseData);
+  const combined = texts.map((text2) => text2.trim()).filter(Boolean).join("\n").trim();
+  return combined || null;
+}
+async function analyzeImage(imageBase64, mimeType = "image/jpeg", apiKey) {
+  if (!rateLimiter.canMakeRequest()) {
+    const waitTime = rateLimiter.getTimeUntilNextRequest();
     return {
       text: null,
-      error: error.message || "Failed to process image with Gemini API"
+      error: `Rate limit exceeded. Please wait ${Math.ceil(waitTime / 1e3)} seconds before uploading another image.`
     };
   }
+  const nanonetsKey = apiKey || process.env.NANONETS_API_KEY;
+  if (!nanonetsKey) {
+    return { text: null, error: "API key missing. Please configure the Nanonets API key in environment variables." };
+  }
+  for (let attempt = 0; attempt <= RATE_LIMIT.maxRetries; attempt++) {
+    try {
+      const formData = new FormData();
+      formData.append("file", Buffer.from(imageBase64, "base64"), {
+        filename: `upload.${mimeType.split("/")[1] || "jpg"}`,
+        contentType: mimeType
+      });
+      const response = await fetch(NANONETS_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${nanonetsKey}:`).toString("base64")}`
+        },
+        body: formData
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        const shouldRetry = isRateLimitError({ code: response.status, message: errorText });
+        if (shouldRetry && attempt < RATE_LIMIT.maxRetries) {
+          const delay = Math.min(
+            RATE_LIMIT.baseDelay * Math.pow(RATE_LIMIT.backoffMultiplier, attempt),
+            RATE_LIMIT.maxDelay
+          );
+          console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${RATE_LIMIT.maxRetries + 1})`);
+          await sleep(delay);
+          continue;
+        }
+        console.error("Nanonets API error:", response.status, errorText);
+        const sanitizedError = errorText.slice(0, 500) || "Failed to call Nanonets OCR API";
+        return {
+          text: null,
+          error: `API Error (${response.status}): ${sanitizedError}`
+        };
+      }
+      const data = await response.json();
+      const extractedText = extractTextFromNanonets(data);
+      if (!extractedText) {
+        return { text: null, error: "No text extracted from the image. Try a clearer image or manual entry." };
+      }
+      return { text: extractedText, error: null };
+    } catch (error) {
+      if (attempt === RATE_LIMIT.maxRetries) {
+        console.error("Nanonets OCR error (final attempt):", error);
+        return {
+          text: null,
+          error: error?.message || "Failed to process image with Nanonets OCR"
+        };
+      }
+      const delay = Math.min(
+        RATE_LIMIT.baseDelay * Math.pow(RATE_LIMIT.backoffMultiplier, attempt),
+        RATE_LIMIT.maxDelay
+      );
+      console.log(`Network error, retrying in ${delay}ms (attempt ${attempt + 1}/${RATE_LIMIT.maxRetries + 1}):`, error);
+      await sleep(delay);
+    }
+  }
+  return {
+    text: null,
+    error: "Maximum retry attempts exceeded."
+  };
 }
 
 // client/src/lib/formatUtils.ts
@@ -135,6 +225,8 @@ function formatOCRResult(text2) {
   return text2.trim();
 }
 function extractPartnerHours(text2) {
+  if (!text2 || typeof text2 !== "string") return [];
+  text2 = text2.replace(/\r\n?/g, "\n");
   if (text2.includes("\n")) {
     const lines = text2.split("\n");
     const result = [];
@@ -148,7 +240,14 @@ function extractPartnerHours(text2) {
     }
     return result;
   }
-  return extractMultiplePartnersFromText(text2);
+  const items = extractMultiplePartnersFromText(text2);
+  const map = /* @__PURE__ */ new Map();
+  for (const p of items) {
+    const key = p.name.replace(/\s+/g, " ").trim();
+    if (!key) continue;
+    map.set(key, p.hours);
+  }
+  return Array.from(map.entries()).map(([name, hours]) => ({ name, hours }));
 }
 function extractPartnerHoursFromLine(line) {
   line = line.trim();
@@ -183,20 +282,20 @@ function extractPartnerHoursFromLine(line) {
 }
 function extractMultiplePartnersFromText(text2) {
   const result = [];
-  const cleanedText = text2.replace(/\s+/g, " ").trim();
+  const cleanedText = text2.replace(/[•·]\s*/g, "\n").replace(/\s{2,}/g, " ").trim();
   const patterns = [
     // Pattern: Name: 32 hours
-    /([A-Za-z\s]+)[\s\-:]+(\d+(?:\.\d+)?)\s*(?:hours|hrs?|h)/gi,
+    /([A-Za-z][A-Za-z\s\.\-']+?)[\s\-:]+(\d+(?:\.\d+)?)\s*(?:hours|hrs?|h)/gi,
     // Pattern: Name (32 hours)
-    /([A-Za-z\s]+)\s*\((\d+(?:\.\d+)?)\s*(?:hours|hrs?|h)\)/gi,
+    /([A-Za-z][A-Za-z\s\.\-']+?)\s*\((\d+(?:\.\d+)?)\s*(?:hours|hrs?|h)\)/gi,
     // Pattern: Name - 32 hours
-    /([A-Za-z\s]+)\s*-\s*(\d+(?:\.\d+)?)\s*(?:hours|hrs?|h)/gi,
+    /([A-Za-z][A-Za-z\s\.\-']+?)\s*-\s*(\d+(?:\.\d+)?)\s*(?:hours|hrs?|h)/gi,
     // Pattern: Name 32h 
-    /([A-Za-z\s]+)\s+(\d+(?:\.\d+)?)\s*h(?:\b|ours|rs)/gi,
+    /([A-Za-z][A-Za-z\s\.\-']+?)\s+(\d+(?:\.\d+)?)\s*h(?:\b|ours|rs)/gi,
     // Pattern: Name: 32
-    /([A-Za-z\s]+)[\s\-:]+(\d+(?:\.\d+)?)/gi,
+    /([A-Za-z][A-Za-z\s\.\-']+?)[\s\-:]+(\d+(?:\.\d+)?)/gi,
     // Last resort - lines with name and a number
-    /([A-Za-z\s\.]+)\s+(\d+(?:\.\d+)?)/gi
+    /([A-Za-z][A-Za-z\s\.\-']+?)\s+(\d+(?:\.\d+)?)/gi
   ];
   for (const pattern of patterns) {
     let matches;
@@ -311,7 +410,9 @@ app.post("/api/ocr", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "No image file provided" });
     }
     const imageBase64 = req.file.buffer.toString("base64");
-    const result = await analyzeImage(imageBase64);
+    const userNanonetsKey = req.headers["x-nanonets-key"] || void 0;
+    const mimeType = req.file.mimetype || "image/jpeg";
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
     if (!result.text) {
       return res.status(500).json({
         error: result.error || "Failed to extract text from image",

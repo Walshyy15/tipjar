@@ -31,8 +31,10 @@ app.post("/api/ocr", upload.single("image"), async (req, res) => {
     // Convert image buffer to base64
     const imageBase64 = req.file.buffer.toString("base64");
     
-    // Use Gemini API to analyze the image
-    const result = await analyzeImage(imageBase64);
+    // Use Nanonets OCR to analyze the image
+    const userNanonetsKey = req.headers["x-nanonets-key"] || undefined;
+    const mimeType = req.file.mimetype || "image/jpeg";
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
     
     if (!result.text) {
       // Return a specific error message from the API if available

@@ -96,7 +96,7 @@ export class MemStorage implements IStorage {
     const distribution: Distribution = { 
       ...insertDistribution, 
       id, 
-      date: new Date().toISOString() 
+      date: new Date()
     };
     this.distributions.set(id, distribution);
     return distribution;

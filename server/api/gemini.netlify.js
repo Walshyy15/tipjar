@@ -1,21 +1,21 @@
 /**
- * Gemini API integration for Netlify functions with rate limiting
+ * Nanonets OCR integration for Netlify functions with rate limiting
  */
 
-// Import libraries needed for Gemini API
-import fetch from 'node-fetch';
+import fetch, { FormData } from 'node-fetch';
 
-// Rate limiting configuration
+const NANONETS_MODEL = 'Nanonets-ocr2-7B';
+const NANONETS_ENDPOINT = `https://app.nanonets.com/api/v2/OCR/Model/${NANONETS_MODEL}/LabelFile/`;
+
 const RATE_LIMIT = {
   maxRetries: 3,
   baseDelay: 1000, // 1 second
   maxDelay: 30000, // 30 seconds
-  backoffMultiplier: 2
+  backoffMultiplier: 2,
 };
 
-// Simple in-memory rate limiter for serverless functions
 class RateLimiter {
-  constructor(maxRequests = 15, windowMs = 60000) { // 15 requests per minute
+  constructor(maxRequests = 15, windowMs = 60000) {
     this.maxRequests = maxRequests;
     this.windowMs = windowMs;
     this.requests = [];
@@ -23,13 +23,12 @@ class RateLimiter {
 
   canMakeRequest() {
     const now = Date.now();
-    // Remove requests older than the window
     this.requests = this.requests.filter(time => now - time < this.windowMs);
-    
+
     if (this.requests.length >= this.maxRequests) {
       return false;
     }
-    
+
     this.requests.push(now);
     return true;
   }
@@ -38,24 +37,74 @@ class RateLimiter {
     if (this.requests.length < this.maxRequests) {
       return 0;
     }
-    
+
     const oldestRequest = Math.min(...this.requests);
     return Math.max(0, this.windowMs - (Date.now() - oldestRequest));
   }
 }
 
 const rateLimiter = new RateLimiter();
-
-// Sleep utility function
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+function isRateLimitError(error) {
+  if (!error) return false;
+  const errorMessage = typeof error === 'string' ? error : error.message || '';
+  const errorCode = error.code || error.status;
+
+  return (
+    errorCode === 429 ||
+    errorMessage.includes('quota') ||
+    errorMessage.includes('rate limit') ||
+    errorMessage.includes('requests per minute')
+  );
+}
+
+function extractTextFromNanonets(responseData) {
+  const texts = [];
+
+  const collectFromNode = (node) => {
+    if (!node) return;
+
+    if (typeof node === 'string') {
+      texts.push(node);
+      return;
+    }
+
+    if (typeof node.text === 'string') texts.push(node.text);
+    if (typeof node.ocr_text === 'string') texts.push(node.ocr_text);
+    if (typeof node.fullText === 'string') texts.push(node.fullText);
+
+    const arrays = [
+      node.result,
+      node.results,
+      node.predictions,
+      node.fields,
+      node.pages,
+      node.page_data,
+      node.lines,
+    ];
+
+    arrays.forEach(collection => {
+      if (Array.isArray(collection)) {
+        collection.forEach(collectFromNode);
+      }
+    });
+  };
+
+  collectFromNode(responseData);
+
+  const combined = texts.map(text => text.trim()).filter(Boolean).join('\n').trim();
+  return combined || null;
+}
+
 /**
- * Analyzes an image using Google's Gemini API with rate limiting and retry logic
+ * Analyzes an image using Nanonets OCR with rate limiting and retry logic
  * @param {string} imageBase64 - Base64 encoded image data
- * @returns {Promise<{text: string|null, error: string|null}>} - Extracted text or error
+ * @param {string} mimeType - Mime type for the uploaded image
+ * @param {string} [apiKey] - Optional API key override from the request
+ * @returns {Promise<{text: string|null, error: string|null}>}
  */
-export async function analyzeImage(imageBase64) {
-  // Check rate limit before making request
+export async function analyzeImage(imageBase64, mimeType = 'image/jpeg', apiKey) {
   if (!rateLimiter.canMakeRequest()) {
     const waitTime = rateLimiter.getTimeUntilNextRequest();
     return {
@@ -64,85 +113,31 @@ export async function analyzeImage(imageBase64) {
     };
   }
 
+  const nanonetsKey = apiKey || process.env.NANONETS_API_KEY;
+  if (!nanonetsKey) {
+    return { text: null, error: 'API key missing. Please configure the Nanonets API key in environment variables.' };
+  }
+
   for (let attempt = 0; attempt <= RATE_LIMIT.maxRetries; attempt++) {
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      
-      if (!apiKey) {
-        console.error("No Gemini API key provided");
-        return { text: null, error: "API key missing. Please configure the Gemini API key in environment variables." };
-      }
-      
-      // Google Gemini API endpoint - Updated to use Gemini 1.5 Flash
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    
-      // Construct the request body with the image and prompt
-      const requestBody = {
-        contents: [
-          {
-            parts: [
-              {
-                text: `
-                  Extract ALL TEXT from this image first. Then identify and extract ALL partner names and their tippable hours from the text.
-                  
-                  Look for patterns indicating partner names followed by hours, such as:
-                  - "Name: X hours" or "Name: Xh"
-                  - "Name - X hours"
-                  - "Name (X hours)"
-                  - Any text that includes names with numeric values that could represent hours
-                  
-                  Return EACH partner's full name followed by their hours, with one partner per line.
-                  Format the output exactly like this:
-                  John Smith: 32
-                  Maria Garcia: 24.5
-                  Alex Johnson: 18.75
-                  
-                  Make sure to include ALL partners mentioned in the image, not just the first one.
-                  If hours are not explicitly labeled, look for numeric values near names that could represent hours.
-                `
-              },
-              {
-                inline_data: {
-                  mime_type: "image/jpeg",
-                  data: imageBase64
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 2048,
-        }
-      };
-      
-      // Make the API call
-      const response = await fetch(endpoint, {
+      const formData = new FormData();
+      formData.append('file', Buffer.from(imageBase64, 'base64'), {
+        filename: `upload.${mimeType.split('/')[1] || 'jpg'}`,
+        contentType: mimeType,
+      });
+
+      const response = await fetch(NANONETS_ENDPOINT, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          Authorization: `Basic ${Buffer.from(`${nanonetsKey}:`).toString('base64')}`,
         },
-        body: JSON.stringify(requestBody)
+        body: formData,
       });
-      
-      // Parse the response
-      const responseData = await response.json();
-      
+
       if (!response.ok) {
-        let shouldRetry = false;
-        let errorMessage = responseData.error?.message || "Error processing image with Gemini API";
-        
-        // Check if this is a rate limit error that we should retry
-        if (response.status === 429 || 
-            errorMessage.includes('quota') || 
-            errorMessage.includes('rate limit') ||
-            errorMessage.includes('requests per minute')) {
-          shouldRetry = true;
-        }
-        
-        // If this is a rate limit error and we have retries left, wait and retry
+        const errorText = await response.text();
+        const shouldRetry = isRateLimitError({ code: response.status, message: errorText });
+
         if (shouldRetry && attempt < RATE_LIMIT.maxRetries) {
           const delay = Math.min(
             RATE_LIMIT.baseDelay * Math.pow(RATE_LIMIT.backoffMultiplier, attempt),
@@ -150,36 +145,34 @@ export async function analyzeImage(imageBase64) {
           );
           console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${RATE_LIMIT.maxRetries + 1})`);
           await sleep(delay);
-          continue; // Retry the request
+          continue;
         }
-        
-        console.error("Gemini API error:", responseData);
-        return { 
-          text: null, 
-          error: errorMessage
+
+        console.error('Nanonets API error:', response.status, errorText);
+        const sanitizedError = errorText.slice(0, 500) || 'Failed to call Nanonets OCR API';
+        return {
+          text: null,
+          error: `API Error (${response.status}): ${sanitizedError}`,
         };
       }
-      
-      // Extract text from Gemini response
-      const extractedText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
-      
+
+      const data = await response.json();
+      const extractedText = extractTextFromNanonets(data);
+
       if (!extractedText) {
-        return { text: null, error: "No text extracted from image" };
+        return { text: null, error: 'No text extracted from the image. Try a clearer image or manual entry.' };
       }
-      
+
       return { text: extractedText, error: null };
-      
     } catch (error) {
-      // If this is the last attempt, return the error
       if (attempt === RATE_LIMIT.maxRetries) {
-        console.error("Gemini API error (final attempt):", error);
-        return { 
-          text: null, 
-          error: error.message || "Failed to process image with Gemini API"
+        console.error('Nanonets OCR error (final attempt):', error);
+        return {
+          text: null,
+          error: error?.message || 'Failed to process image with Nanonets OCR'
         };
       }
-      
-      // For network errors, wait and retry
+
       const delay = Math.min(
         RATE_LIMIT.baseDelay * Math.pow(RATE_LIMIT.backoffMultiplier, attempt),
         RATE_LIMIT.maxDelay
@@ -188,10 +181,9 @@ export async function analyzeImage(imageBase64) {
       await sleep(delay);
     }
   }
-  
-  // This should never be reached, but just in case
-  return { 
+
+  return {
     text: null,
-    error: "Maximum retry attempts exceeded."
+    error: 'Maximum retry attempts exceeded.'
   };
 }

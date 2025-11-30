@@ -26,20 +26,8 @@ app.post("/api/ocr", upload.single("image"), async (req, res) => {
     }
     const imageBase64 = req.file.buffer.toString("base64");
     const mimeType = req.file.mimetype || "image/jpeg";
-    const userGeminiKey = (req.headers["x-gemini-key"] as string) || undefined;
-    const provider = (req.headers["x-ocr-provider"] as string) as any; // "gemini" | "azure-openai"
-    const azure = {
-      endpoint: (req.headers["x-azure-endpoint"] as string) || undefined,
-      apiKey: (req.headers["x-azure-key"] as string) || undefined,
-      deployment: (req.headers["x-azure-deployment"] as string) || undefined,
-      apiVersion: (req.headers["x-azure-api-version"] as string) || undefined,
-    };
-    const azureVision = {
-      endpoint: (req.headers["x-azure-vision-endpoint"] as string) || undefined,
-      apiKey: (req.headers["x-azure-vision-key"] as string) || undefined,
-      apiVersion: (req.headers["x-azure-vision-api-version"] as string) || undefined,
-    };
-    const result = await analyzeImage(imageBase64, mimeType, userGeminiKey, { provider, azure, azureVision });
+    const userNanonetsKey = (req.headers["x-nanonets-key"] as string) || undefined;
+    const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
     if (!result.text) {
       return res.status(500).json({
         error: result.error || "Failed to extract text from image",

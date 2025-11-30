@@ -1,6 +1,6 @@
-# Rate Limiting Solution for Gemini API
+# Rate Limiting Solution for OCR API
 
-This document explains the rate limiting implementation to prevent "Quota exceeded" errors when using the Google Gemini API.
+This document explains the rate limiting implementation to prevent "Quota exceeded" errors when using the Nanonets OCR API.
 
 ## Problem
 The error "Quota exceeded for quota metric 'Generate Content API requests per minute'" occurs when your application exceeds Google's API rate limits, which are typically:
@@ -29,7 +29,7 @@ The error "Quota exceeded for quota metric 'Generate Content API requests per mi
 Edit `server/config/rate-limit.ts` to adjust settings:
 
 ```typescript
-export const GEMINI_RATE_LIMIT_CONFIG = {
+export const OCR_RATE_LIMIT_CONFIG = {
   maxRequests: 15,        // Requests per minute
   windowMs: 60 * 1000,    // Time window (1 minute)
   maxRetries: 3,          // Retry attempts
@@ -63,7 +63,6 @@ Check server logs for rate limiting activity:
 ## Upgrading API Limits
 
 To handle more requests:
-1. Upgrade your Google Cloud project to a paid tier
-2. Increase quotas in Google Cloud Console
-3. Update `maxRequests` in the configuration file
-4. Consider implementing Redis-based rate limiting for multiple server instances
+1. Upgrade your Nanonets plan or request higher quotas
+2. Update `maxRequests` in the configuration file to match the new limits
+3. Consider implementing Redis-based rate limiting for multiple server instances

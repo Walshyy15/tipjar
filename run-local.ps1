@@ -46,7 +46,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # Set environment variables for development
 $env:NODE_ENV = "development"
-$env:GEMINI_API_KEY = "AIzaSyBUo0YJwQJSn7CNpMRw3gYnHXXeMRndI5s"
+$env:NANONETS_API_KEY = "your-nanonets-api-key"
 
 # Start the server
 Write-Host "Starting TipJar application..." -ForegroundColor Green

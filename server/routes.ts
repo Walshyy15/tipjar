@@ -29,8 +29,10 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
       // Convert image buffer to base64
       const imageBase64 = req.file.buffer.toString("base64");
       
-      // Use Gemini API to analyze the image
-      const result = await analyzeImage(imageBase64);
+      // Use Nanonets OCR to analyze the image
+      const userNanonetsKey = (req.headers["x-nanonets-key"] as string) || undefined;
+      const mimeType = req.file.mimetype || "image/jpeg";
+      const result = await analyzeImage(imageBase64, mimeType, userNanonetsKey);
       
       if (!result.text) {
         // Return a specific error message from the API if available
@@ -72,7 +74,7 @@ export async function registerRoutes(app: Express, skipServer = false): Promise<
       }
       
       // Calculate payout for each partner
-      const partnerPayouts = partnerHours.map(partner => {
+      const partnerPayouts = partnerHours.map((partner: { name: string; hours: number }) => {
         const payout = calculatePayout(partner.hours, hourlyRate);
         const { rounded, billBreakdown } = roundAndCalculateBills(payout);
         
